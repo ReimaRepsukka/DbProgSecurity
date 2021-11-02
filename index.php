@@ -1,11 +1,19 @@
 <?php
+session_start();
 require('headers.php');
 require('functions.php');
 
 $json = json_decode(file_get_contents('php://input'));
 
-$fname = filter_var( $json->fname, FILTER_SANITIZE_STRING );
-$lname =  filter_var( $json->lname, FILTER_SANITIZE_STRING );
+
+if(isset($_SESSION['username'])){
+    echo "This is user authorized info";
+    exit;
+}else if(!isset($json->uname)){
+    header("HTTP/1.1 401");
+}
+
+
 $username = filter_var( $json->uname, FILTER_SANITIZE_STRING );
 $passwd = filter_var( $json->pwd, FILTER_SANITIZE_STRING );
 
@@ -16,11 +24,17 @@ try{
 
     createTable($dbcon);
    
-    $sql = "INSERT INTO user VALUES(?,?,?,?)";
+    $sql = "SELECT * FROM user WHERE username=? AND password=?";
     $prepared = $dbcon->prepare($sql);
-    $prepared->execute(array($fname, $lname, $username, $passwd));
+    $prepared->execute(array($username, $passwd));
 
-    echo "All good";
+    foreach($prepared as $row){
+        $_SESSION['username']=$row['username'];
+        echo "This is user authorized info";
+        exit;
+    }
+
+    header("HTTP/1.1 401");
 
 }catch(PDOException $e){
     echo '<br>'.$e->getMessage();
